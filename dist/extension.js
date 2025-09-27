@@ -35,18 +35,44 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var vscode = __toESM(require("vscode"));
+var import_child_process = require("child_process");
+var path = __toESM(require("path"));
 function activate(context) {
   console.log('Congratulations, your extension "vertex-tester" is now active!');
-  const disposable = vscode.commands.registerCommand("vertex-tester.generateTests", () => {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-      vscode.window.showErrorMessage("No file is currently open. Please open a file to generate tests.");
+  const disposable = vscode.commands.registerCommand("vertex-tester.generateTests", async () => {
+    const fileUris = await vscode.window.showOpenDialog({
+      canSelectMany: true,
+      filters: {
+        "Python Files": ["py"],
+        "JavaScript Files": ["js"],
+        "TypeScript Files": ["ts"]
+      },
+      openLabel: "Select Files to Generate Tests"
+    });
+    if (!fileUris || fileUris.length === 0) {
+      vscode.window.showWarningMessage("No files selected.");
       return;
     }
-    const filePath = activeEditor.document.uri.fsPath;
-    const fileName = activeEditor.document.fileName;
-    vscode.window.showInformationMessage(`Generating tests for: ${fileName}`);
-    console.log("File path to process:", filePath);
+    vscode.window.showInformationMessage(`Selected ${fileUris.length} file(s) for test generation.`);
+    const outputDir = path.dirname(fileUris[0].fsPath);
+    const pythonScriptPath = path.join(context.extensionPath, "main.py");
+    for (let i = 0; i < fileUris.length; i++) {
+      const filePath = fileUris[i].fsPath;
+      const fileName = path.basename(filePath);
+      vscode.window.showInformationMessage(`Processing file ${i + 1} of ${fileUris.length}: ${fileName}`);
+      const command = `python "${pythonScriptPath}" "${filePath}" "${outputDir}"`;
+      (0, import_child_process.exec)(command, (error, stdout, stderr) => {
+        if (error) {
+          vscode.window.showErrorMessage(`Error processing ${fileName}: ${error.message}`);
+          return;
+        }
+        if (stderr) {
+          console.error(`stderr for ${fileName}:`, stderr);
+        }
+        vscode.window.showInformationMessage(`\u2705 Generated tests for ${fileName}`);
+        console.log(`Results for ${fileName}:`, stdout);
+      });
+    }
   });
   context.subscriptions.push(disposable);
 }
