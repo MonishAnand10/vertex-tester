@@ -2,7 +2,7 @@
   "name": "vertex-tester",
   "displayName": "Vertex Tester",
   "description": "AI-Powered unit test generation extension that leverages Google Gemini to create comprehensive test cases for your Codebase.",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "author": "Dhulipala Siva Tejaswi, Kaushal Girish & Monish Anand",
   "publisher": "nuggets-vertex-tester-team",
   "engines": {

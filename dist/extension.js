@@ -37,6 +37,7 @@ module.exports = __toCommonJS(extension_exports);
 var vscode = __toESM(require("vscode"));
 var import_child_process = require("child_process");
 var path = __toESM(require("path"));
+var fs = __toESM(require("fs"));
 function activate(context) {
   console.log('Congratulations, your extension "vertex-tester" is now active!');
   const disposable = vscode.commands.registerCommand("vertex-tester.generateTests", async () => {
@@ -53,24 +54,36 @@ function activate(context) {
       vscode.window.showWarningMessage("No files selected.");
       return;
     }
-    vscode.window.showInformationMessage(`Selected ${fileUris.length} file(s) for test generation.`);
+    const apiKeyPath = path.join(context.extensionPath, "GOOGLE_CLOUD_API_KEY.txt");
+    let apiKey;
+    try {
+      apiKey = fs.readFileSync(apiKeyPath, "utf8").trim();
+      if (!apiKey) {
+        vscode.window.showErrorMessage("API key file is empty. Please add your Google Cloud API key to GOOGLE_CLOUD_API_KEY.txt");
+        return;
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage("Could not read API key file. Please ensure GOOGLE_CLOUD_API_KEY.txt exists in the extension folder.");
+      return;
+    }
+    vscode.window.showInformationMessage(`Selected ${fileUris.length} file(s) for AI test generation.`);
     const outputDir = path.dirname(fileUris[0].fsPath);
     const pythonScriptPath = path.join(context.extensionPath, "main.py");
     for (let i = 0; i < fileUris.length; i++) {
       const filePath = fileUris[i].fsPath;
       const fileName = path.basename(filePath);
-      vscode.window.showInformationMessage(`Processing file ${i + 1} of ${fileUris.length}: ${fileName}`);
-      const command = `python "${pythonScriptPath}" "${filePath}" "${outputDir}"`;
+      vscode.window.showInformationMessage(`\u{1F916} AI generating tests for file ${i + 1} of ${fileUris.length}: ${fileName}`);
+      const command = `python "${pythonScriptPath}" "${filePath}" "${outputDir}" "${apiKey}"`;
       (0, import_child_process.exec)(command, (error, stdout, stderr) => {
         if (error) {
-          vscode.window.showErrorMessage(`Error processing ${fileName}: ${error.message}`);
+          vscode.window.showErrorMessage(`Error generating tests for ${fileName}: ${error.message}`);
           return;
         }
         if (stderr) {
           console.error(`stderr for ${fileName}:`, stderr);
         }
-        vscode.window.showInformationMessage(`\u2705 Generated tests for ${fileName}`);
-        console.log(`Results for ${fileName}:`, stdout);
+        vscode.window.showInformationMessage(`SUCCESS: AI test file generated for ${fileName}`);
+        console.log(`AI generation results for ${fileName}:`, stdout);
       });
     }
   });
