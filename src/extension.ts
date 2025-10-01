@@ -6,9 +6,10 @@
  * 
  * Phase 1: Code analysis and function extraction (COMPLETE)
  * Phase 2: Gemini AI integration for test generation (COMPLETE)
+ * Phase 3: Multi-language support (Python & Java) (COMPLETE)
  * 
  * @author Dhulipala Siva Tejaswi, Kaushal Girish & Monish Anand
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 // The module 'vscode' contains the VS Code extensibility API
@@ -32,20 +33,22 @@ export function activate(context: vscode.ExtensionContext) {
 	 * Main command: Generate Unit Tests with Gemini
 	 * 
 	 * Workflow:
-	 * 1. Show file picker for multiple file selection
-	 * 2. Validate selected files
+	 * 1. Show file picker for multiple file selection (Python, Java, JavaScript, TypeScript)
+	 * 2. Validate selected files and detect programming language
 	 * 3. Read API key from GOOGLE_CLOUD_API_KEY.txt
 	 * 4. Process each file with Python script (main.py) + AI generation
-	 * 5. Generate actual unit test files using Gemini AI
+	 * 5. Generate appropriate unit test files using Gemini AI (pytest/JUnit)
 	 * 6. Display progress and results to user
 	 */
 	const disposable = vscode.commands.registerCommand('vertex-tester.generateTests', async () => {
 		
-		// Show file picker for multiple file selection
+		// Show file picker for multiple file selection with multi-language support
 		const fileUris = await vscode.window.showOpenDialog({
 			canSelectMany: true,
 			filters: {
+				'All Supported Files': ['py', 'java', 'js', 'ts'],
 				'Python Files': ['py'],
+				'Java Files': ['java'],
 				'JavaScript Files': ['js'],
 				'TypeScript Files': ['ts']
 			},
@@ -72,29 +75,53 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		// Show selected files count
-		vscode.window.showInformationMessage(`Selected ${fileUris.length} file(s) for AI test generation.`);
+		// Show selected files count with multi-language support
+		vscode.window.showInformationMessage(`Selected ${fileUris.length} file(s) for multi-language AI test generation.`);
 		
 		// Setup paths for Python script execution
-		const outputDir = path.dirname(fileUris[0].fsPath); // Use first file's directory for output
+		// Create organized tests folder structure
+		const baseDir = path.dirname(fileUris[0].fsPath); // Get base directory where files were picked
+		const testsDir = path.join(baseDir, 'tests'); // Create tests subdirectory path
+
+		// Create tests directory if it doesn't exist
+		try {
+			if (!fs.existsSync(testsDir)) {
+				fs.mkdirSync(testsDir, { recursive: true });
+				console.log(`Created tests directory: ${testsDir}`);
+			}
+		} catch (error) {
+			vscode.window.showErrorMessage(`Failed to create tests directory: ${error}`);
+			return;
+		}
+
+		const outputDir = testsDir; // Use tests directory for all output files
 		const pythonScriptPath = path.join(context.extensionPath, 'main.py');
 
-		// Process each selected file individually with AI generation
+		// Process each selected file individually with AI generation and language detection
 		for (let i = 0; i < fileUris.length; i++) {
 			const filePath = fileUris[i].fsPath;
 			const fileName = path.basename(filePath);
+			const fileExtension = path.extname(filePath).toLowerCase();
 			
-			// Show progress to user
-			vscode.window.showInformationMessage(`🤖 AI generating tests for file ${i + 1} of ${fileUris.length}: ${fileName}`);
+			// Determine language for user feedback
+			let language = 'Unknown';
+			if (fileExtension === '.py') {language = 'Python';}
+			else if (fileExtension === '.java') {language = 'Java';}
+			else if (fileExtension === '.js') {language = 'JavaScript';}
+			else if (fileExtension === '.ts') {language = 'TypeScript';}
+			
+			// Show progress to user with language information
+			vscode.window.showInformationMessage(`🤖 AI generating ${language} tests for file ${i + 1} of ${fileUris.length}: ${fileName}`);
 			
 			// Construct Python command with file path, output directory, and API key
+			// The main.py script will automatically detect the programming language
 			const command = `python "${pythonScriptPath}" "${filePath}" "${outputDir}" "${apiKey}"`;
 			
 			// Execute Python script with AI generation
 			exec(command, (error, stdout, stderr) => {
 				if (error) {
 					// Handle Python script execution errors
-					vscode.window.showErrorMessage(`Error generating tests for ${fileName}: ${error.message}`);
+					vscode.window.showErrorMessage(`ERROR: Error generating tests for ${fileName}: ${error.message}`);
 					return;
 				}
 				if (stderr) {
@@ -102,8 +129,8 @@ export function activate(context: vscode.ExtensionContext) {
 					console.error(`stderr for ${fileName}:`, stderr);
 				}
 				
-				// Notify user of successful AI test generation
-				vscode.window.showInformationMessage(`SUCCESS: AI test file generated for ${fileName}`);
+				// Notify user of successful AI test generation with language context
+				vscode.window.showInformationMessage(`SUCCESS: AI ${language} test file generated for ${fileName}`);
 				
 				// Log results for debugging (includes AI generation progress)
 				console.log(`AI generation results for ${fileName}:`, stdout);

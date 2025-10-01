@@ -1,8 +1,8 @@
 {
   "name": "vertex-tester",
   "displayName": "Vertex Tester",
-  "description": "AI-Powered unit test generation extension that leverages Google Gemini to create comprehensive test cases for your Codebase.",
-  "version": "1.0.0",
+  "description": "Multi-language AI-powered unit test generation extension that leverages Google Gemini to create comprehensive test cases for Python and Java codebases.",
+  "version": "1.1.0",
   "author": "Dhulipala Siva Tejaswi, Kaushal Girish & Monish Anand",
   "publisher": "nuggets-vertex-tester-team",
   "engines": {
@@ -24,14 +24,14 @@
       "explorer/context": [
         {
           "command": "vertex-tester.generateTests",
-          "when": "resourceExtname == .py || resourceExtname == .js || resourceExtname == .ts",
+          "when": "resourceExtname == .py || resourceExtname == .java || resourceExtname == .js || resourceExtname == .ts",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "vertex-tester.generateTests",
-          "when": "resourceExtname == .py || resourceExtname == .js || resourceExtname == .ts",
+          "when": "resourceExtname == .java || resourceExtname == .py || resourceExtname == .js || resourceExtname == .ts",
           "group": "navigation"
         }
       ]

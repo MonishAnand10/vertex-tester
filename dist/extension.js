@@ -44,7 +44,9 @@ function activate(context) {
     const fileUris = await vscode.window.showOpenDialog({
       canSelectMany: true,
       filters: {
+        "All Supported Files": ["py", "java", "js", "ts"],
         "Python Files": ["py"],
+        "Java Files": ["java"],
         "JavaScript Files": ["js"],
         "TypeScript Files": ["ts"]
       },
@@ -66,23 +68,45 @@ function activate(context) {
       vscode.window.showErrorMessage("Could not read API key file. Please ensure GOOGLE_CLOUD_API_KEY.txt exists in the extension folder.");
       return;
     }
-    vscode.window.showInformationMessage(`Selected ${fileUris.length} file(s) for AI test generation.`);
-    const outputDir = path.dirname(fileUris[0].fsPath);
+    vscode.window.showInformationMessage(`Selected ${fileUris.length} file(s) for multi-language AI test generation.`);
+    const baseDir = path.dirname(fileUris[0].fsPath);
+    const testsDir = path.join(baseDir, "tests");
+    try {
+      if (!fs.existsSync(testsDir)) {
+        fs.mkdirSync(testsDir, { recursive: true });
+        console.log(`Created tests directory: ${testsDir}`);
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to create tests directory: ${error}`);
+      return;
+    }
+    const outputDir = testsDir;
     const pythonScriptPath = path.join(context.extensionPath, "main.py");
     for (let i = 0; i < fileUris.length; i++) {
       const filePath = fileUris[i].fsPath;
       const fileName = path.basename(filePath);
-      vscode.window.showInformationMessage(`\u{1F916} AI generating tests for file ${i + 1} of ${fileUris.length}: ${fileName}`);
+      const fileExtension = path.extname(filePath).toLowerCase();
+      let language = "Unknown";
+      if (fileExtension === ".py") {
+        language = "Python";
+      } else if (fileExtension === ".java") {
+        language = "Java";
+      } else if (fileExtension === ".js") {
+        language = "JavaScript";
+      } else if (fileExtension === ".ts") {
+        language = "TypeScript";
+      }
+      vscode.window.showInformationMessage(`\u{1F916} AI generating ${language} tests for file ${i + 1} of ${fileUris.length}: ${fileName}`);
       const command = `python "${pythonScriptPath}" "${filePath}" "${outputDir}" "${apiKey}"`;
       (0, import_child_process.exec)(command, (error, stdout, stderr) => {
         if (error) {
-          vscode.window.showErrorMessage(`Error generating tests for ${fileName}: ${error.message}`);
+          vscode.window.showErrorMessage(`ERROR: Error generating tests for ${fileName}: ${error.message}`);
           return;
         }
         if (stderr) {
           console.error(`stderr for ${fileName}:`, stderr);
         }
-        vscode.window.showInformationMessage(`SUCCESS: AI test file generated for ${fileName}`);
+        vscode.window.showInformationMessage(`SUCCESS: AI ${language} test file generated for ${fileName}`);
         console.log(`AI generation results for ${fileName}:`, stdout);
       });
     }
